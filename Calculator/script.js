@@ -1,5 +1,5 @@
-// Calculator script - исправленная версия
-console.log('🧮 Calculator script loaded');
+// Calculator script with admin tools
+console.log('🧮 Calculator with admin tools loaded');
 
 let currentExpression = '';
 
@@ -34,10 +34,9 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('🚪 Logging out...');
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('currentUser');
+        localStorage.removeItem('loginTime');
         window.location.href = '../Main/main.html';
     });
-    
-    console.log('✅ Calculator initialized');
 });
 
 // Создаем кнопку админа
@@ -48,31 +47,36 @@ function createAdminButton() {
     const adminBtn = document.createElement('div');
     adminBtn.className = 'admin-btn';
     adminBtn.textContent = 'Admin';
-    adminBtn.onclick = showAllUsers;
+    adminBtn.onclick = showAdminPanel;
     
     userMenu.insertBefore(adminBtn, userMenu.querySelector('.username'));
     console.log('✅ Admin button created');
 }
 
-// Показать всех пользователей
-function showAllUsers() {
+// Админская панель
+function showAdminPanel() {
     const usersData = localStorage.getItem('usersFile');
-    if (usersData) {
-        const users = JSON.parse(usersData);
-        let userList = '📊 Все пользователи:\n\n';
-        
-        Object.entries(users).forEach(([username, password], index) => {
-            userList += `${index + 1}. 👤 ${username}\n   🔑 ${password}\n\n`;
-        });
-        
-        userList += `Всего: ${Object.keys(users).length} пользователей`;
-        alert(userList);
-    } else {
+    if (!usersData) {
         alert('😴 Пользователей еще нет!');
+        return;
     }
+    
+    const users = JSON.parse(usersData);
+    let adminMenu = '👑 Admin Panel\n\n';
+    
+    Object.entries(users).forEach(([username, hash], index) => {
+        adminMenu += `${index + 1}. 👤 ${username}\n   🔐 Хеш: ${hash}\n\n`;
+    });
+    
+    adminMenu += `Всего пользователей: ${Object.keys(users).length}\n\n`;
+    adminMenu += '⚙️ Команды для консоли:\n';
+    adminMenu += 'resetUserPassword("username", "newpass") - сброс пароля\n';
+    adminMenu += 'localStorage.usersFile - просмотр всех хешей';
+    
+    alert(adminMenu);
 }
 
-// Функции калькулятора
+// Функции калькулятора (без изменений)
 function appendToDisplay(value) {
     currentExpression += value;
     document.getElementById('result').value = currentExpression;
@@ -95,23 +99,19 @@ function calculate() {
         const result = eval(currentExpression);
         const calculation = `${currentExpression} = ${result}`;
         
-        // Сохраняем историю для пользователя
         let userHistory = JSON.parse(localStorage.getItem(`calcHistory_${username}`) || '[]');
         userHistory.unshift(calculation);
         
-        // Ограничиваем историю 10 записями
         if (userHistory.length > 10) {
             userHistory = userHistory.slice(0, 10);
         }
         
         localStorage.setItem(`calcHistory_${username}`, JSON.stringify(userHistory));
         
-        // Показываем результат
         document.getElementById('history').textContent = currentExpression;
         document.getElementById('result').value = result;
         currentExpression = result.toString();
         
-        // Обновляем историю на экране
         displayHistory();
         
     } catch (error) {
@@ -133,4 +133,25 @@ function displayHistory() {
         historyItem.textContent = item;
         historyList.appendChild(historyItem);
     });
+}
+
+// Функция для сброса паролей (доступна в консоли)
+function resetUserPassword(username, newPassword) {
+    let users = JSON.parse(localStorage.getItem('usersFile') || '{}');
+    
+    // Простая хеш-функция (такая же как в scriptmain.js)
+    function simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            let char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash).toString(16);
+    }
+    
+    users[username] = simpleHash(newPassword);
+    localStorage.setItem('usersFile', JSON.stringify(users));
+    console.log(`✅ Password for ${username} reset to: ${newPassword}`);
+    return `Пароль для ${username} сброшен на: ${newPassword}`;
 }
