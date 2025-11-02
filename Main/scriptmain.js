@@ -1,49 +1,70 @@
-// Main/scriptmain.js - исправленная версия
-console.log('🔐 Login script loaded');
+// Исправленная версия scriptmain.js
+console.log('🔧 scriptmain.js loaded');
 
-// Удаляем автоматический редирект - ВАЖНО!
-// НЕТ автоматического перехода на калькулятор!
+// Проверяем авторизацию
+if (localStorage.getItem('isLoggedIn') === 'true') {
+    console.log('✅ Already logged in, redirecting...');
+    window.location.href = '../Calculator/index.html';
+}
 
-document.getElementById('loginForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    console.log('🎯 Form submitted');
+// Простая функция хеширования (в реальном проекте используй bcrypt)
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return hash.toString();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ DOM loaded');
     
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const form = document.getElementById('loginForm');
+    if (!form) {
+        console.error('❌ Login form not found!');
+        return;
+    }
     
-    if (username && password) {
-        // Хеш-функция
-        function simpleHash(str) {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                let char = str.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash;
-            }
-            return Math.abs(hash).toString(16);
-        }
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        console.log('🎯 Login form submitted');
         
-        let users = JSON.parse(localStorage.getItem('usersFile') || '{}');
-        const hashedPassword = simpleHash(password);
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
         
-        if (users[username] && users[username] !== hashedPassword) {
-            alert('Неверный пароль!');
+        if (!username || !password) {
+            alert('Please fill in all fields!');
             return;
         }
         
-        // Сохраняем пользователя
-        users[username] = hashedPassword;
-        localStorage.setItem('usersFile', JSON.stringify(users));
+        // Получаем пользователей из localStorage
+        let usersData = localStorage.getItem('usersFile');
+        let users = usersData ? JSON.parse(usersData) : {};
+        
+        // Проверяем существование пользователя
+        if (!users[username]) {
+            // Регистрируем нового пользователя
+            const hashedPassword = simpleHash(password);
+            users[username] = hashedPassword;
+            localStorage.setItem('usersFile', JSON.stringify(users));
+            console.log('✅ New user registered:', username);
+        } else {
+            // Проверяем пароль существующего пользователя
+            const hashedInputPassword = simpleHash(password);
+            if (users[username] !== hashedInputPassword) {
+                alert('Wrong password!');
+                return;
+            }
+        }
+        
+        // Сохраняем сессию
         localStorage.setItem('currentUser', username);
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('loginTime', Date.now().toString());
         
         console.log('✅ Login successful, redirecting...');
-        // ТОЛЬКО после успешного логина переходим
         window.location.href = '../Calculator/index.html';
-    } else {
-        alert('Заполните все поля!');
-    }
+    });
 });
-
-// УБРАТЬ автоматический редирект при загрузке!
-// Оставить ТОЛЬКО ручной переход после логина
