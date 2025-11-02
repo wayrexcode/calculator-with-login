@@ -1,73 +1,49 @@
-// Версия с хешированием паролей
-console.log('🔐 Login with password hashing loaded');
+// Main/scriptmain.js - исправленная версия
+console.log('🔐 Login script loaded');
 
-// Простая хеш-функция
-function simpleHash(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        let char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return Math.abs(hash).toString(16);
-}
+// Удаляем автоматический редирект - ВАЖНО!
+// НЕТ автоматического перехода на калькулятор!
 
 document.getElementById('loginForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    console.log('🎯 Form submitted');
     
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     
-    console.log('🔑 Login attempt:', username);
-    
     if (username && password) {
+        // Хеш-функция
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                let char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(16);
+        }
+        
         let users = JSON.parse(localStorage.getItem('usersFile') || '{}');
         const hashedPassword = simpleHash(password);
         
-        console.log('📊 Stored hash for user:', users[username]);
-        console.log('🔢 Input hash:', hashedPassword);
-        
-        if (users[username]) {
-            // Пользователь существует - проверяем хеш
-            if (users[username] === hashedPassword) {
-                console.log('✅ Password correct!');
-                loginSuccess(username);
-            } else {
-                console.log('❌ Wrong password!');
-                alert('Неверный пароль!');
-            }
-        } else {
-            // Новый пользователь - сохраняем хеш
-            users[username] = hashedPassword;
-            localStorage.setItem('usersFile', JSON.stringify(users));
-            console.log('👤 New user created with hash:', hashedPassword);
-            loginSuccess(username);
+        if (users[username] && users[username] !== hashedPassword) {
+            alert('Неверный пароль!');
+            return;
         }
+        
+        // Сохраняем пользователя
+        users[username] = hashedPassword;
+        localStorage.setItem('usersFile', JSON.stringify(users));
+        localStorage.setItem('currentUser', username);
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        console.log('✅ Login successful, redirecting...');
+        // ТОЛЬКО после успешного логина переходим
+        window.location.href = '../Calculator/index.html';
     } else {
         alert('Заполните все поля!');
     }
 });
 
-function loginSuccess(username) {
-    localStorage.setItem('currentUser', username);
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('loginTime', Date.now());
-    
-    console.log('🚀 Login successful, redirecting...');
-    window.location.href = '../Calculator/index.html';
-}
-
-// Проверка существующего входа
-if (localStorage.getItem('isLoggedIn') === 'true') {
-    console.log('✅ Already logged in, redirecting...');
-    window.location.href = '../Calculator/index.html';
-}
-
-// Функция для сброса пароля (для админа)
-function resetUserPassword(username, newPassword) {
-    let users = JSON.parse(localStorage.getItem('usersFile') || '{}');
-    users[username] = simpleHash(newPassword);
-    localStorage.setItem('usersFile', JSON.stringify(users));
-    console.log(`✅ Password for ${username} reset to: ${newPassword}`);
-    return `Пароль для ${username} сброшен на: ${newPassword}`;
-}
+// УБРАТЬ автоматический редирект при загрузке!
+// Оставить ТОЛЬКО ручной переход после логина
